@@ -1,0 +1,104 @@
+---
+title: "ge02graphs"
+author: "Christian Ortiz"
+date: "10/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setting Up Libraries and Datasets
+
+```{r}
+library(tidyverse)
+
+player_data <- read.csv("Master.csv")
+pitching_data <- read.csv("Pitching.csv")
+salary_data <- read.csv("Salaries.csv")
+inflation_index <- read.csv("inflation.csv")
+summary_salary <- summarize(group_by(salary_data, yearID), Q1 = quantile(salary,.25,na.rm=T),median=median(salary,na.rm=T), Q3 = quantile(salary,.75,na.rm=T), min=min(salary,na.rm=T), max=max(salary,na.rm=T))
+summary_salary$yearID <- as.numeric(as.character(summary_salary$yearID))
+```
+
+# First Excercise
+
+**Exercise:** The ERA (earned run average) is a statistic computed for pitchers. It measures the average number of runs (per 9-inning game) allowed by a pitcher. If a pitcher is successful, this number is low. Create two graphs depicting how the ERAs have varied in major league baseball over time. First, show a series of boxplots, one for each year, showing the distribution of ERAs. Second, create a line graph showing how the median ERA has changed over time.
+
+```{r}
+pitching_data$yearID <- as.factor(pitching_data$yearID)
+ERA_data <- select(pitching_data, playerID, yearID, ERA)
+#ERA_data <- mutate(ERA_data, median_ERA = median(ERA_data$ERA))
+#Series of Boxplots, one for each year, showing distribution of ERA's
+ggplot(ERA_data) + geom_boxplot(aes(x = yearID, y = ERA))
+
+# Median ERA over time
+ERA_data$yearID <- as.numeric(as.character(ERA_data$yearID))
+ERA_data <- filter(ERA_data, !is.na(ERA))
+median_ERA <- summarize(group_by(ERA_data, yearID), median = median(ERA))
+ggplot(median_ERA) + geom_line(aes(x= yearID, y = median))
+```
+
+
+
+# Second Excercise
+
+**Excercise:**  Modify your ERA graph so that it shows that range between the first and third quartiles as a light green ribbon, with the median ERA depicted as a dark blue line.
+
+```{r}
+summary_ERA <- summarize(group_by(ERA_data, yearID), Q1 = quantile(ERA,.25,na.rm=T),median=median(ERA,na.rm=T), Q3 = quantile(ERA,.75,na.rm=T), min=min(ERA,na.rm=T), max=max(ERA,na.rm=T))
+ggplot(summary_ERA) + geom_ribbon(aes(x= yearID, ymin= Q1, ymax=Q3), fill = "lightgreen") +
+  geom_line(aes(x=yearID, y= median), color = "darkblue")
+```
+
+
+# Third Excercise
+
+**Exercise:** Create an imitation of the graph below, which displays the proportion of pitchers who had an ERA less than or equal to 3 and the proportion who had an ERA greater than or equal to 6. Start by filtering your pitching data so that it only includes players who pitched at least 10 games. Next, summarize your filtered data so that it displays the proportion of pitchers who had an ERA less than or equal to 3 and the proportion who had an ERA greater than or equal to 6. Then construct your plot.
+
+```{r}
+pitching_data$yearID <- as.numeric(as.character(pitching_data$yearID))
+ERA_prop_data <- select(pitching_data, ERA, yearID, playerID, G)
+ERA_prop <- filter(ERA_prop_data, G >= 10)
+ERA_prop <- summarize(group_by(ERA_prop, yearID), prop_3 = mean(ERA<=3), prop_6 = mean(ERA>=6))
+ggplot(ERA_prop) + geom_line(aes(x=yearID, y = prop_3, color="3 or under")) + 
+  geom_line(aes(x=yearID, y = prop_6, color="6 or higher")) +
+  labs(y= "Proportion", x = "Year",
+       title = "Proportion of Pitchers (pitching at least 10 games) \n With Low and High ERAs by Year")+ 
+  scale_color_manual(values=c("3 or under"="darkblue","6 or higher"="red"),
+                     name="ERA")+
+  theme_classic()
+```
+
+# Fourth Excercise
+
+**Excercise:** Recreate the graph below, which shows the salaries for the central 50% of earners divided between players who were born in the United States and who were born outside the United States. You’ll need to join the salary data and the player data, create a new variable with the values “Born in USA” and “Born outside USA,” group and summarize the data to get the summary salary statistics for each year and value of your new variable, join the summarized data to the inflation data, modify your summary statistics to adjust for inflation, then create your plot.
+
+```{r}
+# Data Tidying
+salary_player_join <- left_join(salary_data, player_data, by="playerID")
+salary_player_born <- select(salary_player_join, yearID, playerID, birthCountry, salary)
+salary_player_born <- filter(salary_player_born, birthCountry != (is.na(birthCountry)))
+salary_player_born <- mutate(salary_player_born, born = ifelse(birthCountry == "USA", "Born in USA",
+                                                           "Born outside USA"))
+summary_salary_born <- summarize(group_by(salary_player_born, yearID, born), Q1 = quantile(salary,.25,na.rm=T),median=median(salary,na.rm=T), Q3 = quantile(salary,.75,na.rm=T), min=min(salary,na.rm=T), max=max(salary,na.rm=T))
+names(inflation_index)[1] <- "yearID"
+born_inflation_join <- inner_join(inflation_index, summary_salary_born, by = "yearID")
+summary_inflation_born <- summarize(group_by(born_inflation_join, yearID, born),
+                                    median=median*inflation2015, Q1=Q1*inflation2015,
+                                    Q3=Q3*inflation2015,
+                                    min=min*inflation2015, max=max*inflation2015)
+# Data Viz
+ggplot(summary_inflation_born) + 
+  geom_ribbon(aes(x=yearID,ymin= Q1, ymax =Q3, fill=born), alpha=0.4)+
+  scale_fill_discrete(name="Middle 50% of Earners")+
+  geom_line(aes(x=yearID, y=median, color=born))+
+  scale_color_discrete(name="Median Salary")+
+  scale_y_continuous(labels=scales::dollar)+
+  labs(title="Salaries of Middle 50% of Earners in Major League Baseball",
+       x = "Year",
+       y = "Annual Salary \n (Adjusted for Inflation)")+
+  theme_minimal()
+```
+
