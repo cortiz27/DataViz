@@ -1,0 +1,145 @@
+---
+title: "Diamond Analysis"
+author: "Christian Ortiz"
+date: "10/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Diamond Analysis
+
+
+```{r}
+library(tidyverse)
+
+diamonds.small <-  diamonds[sample(nrow(diamonds), 500),]
+```
+
+
+## 1. 
+
+A standard scatterplot of carat vs. price:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price)) + 
+  geom_point()+
+  labs(title="Carat vs. Price")
+```
+
+
+
+
+**Description:** For our Carat vs. Price scattter plot, we see a clear positive relationship between both variables; that is, as carat size increases, price increases.
+
+## 2.
+
+A scatter plot of carat vs. price in which the size of the points is proportional to the frequency (sometimes called a bubble plot)
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price)) + 
+  geom_count(alpha = 0.5)+
+  labs(title="Carat vs. Price by Frequency")
+```
+
+
+
+
+**Description:** For our Carat vs Price by Frequency bubble plot, we can see that the most common types of diamonds lie between 0 and 1 carat and between 0 and $5000.
+
+## 3. 
+
+A scatter plot of carat vs. price in which the size of the points is proportional to the relative frequency and the color is determined by the quality of the cut:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price, color=cut)) + 
+  geom_count(aes(size=stat(prop)), alpha = 0.5)+
+  labs(title="Carat vs. Price by Relative Frequency and Cut")
+```
+
+
+
+
+
+**Description:** For our Carat vs Price by Relative Frequency and Cut bubble plot, we can see again that the larger proportion of observations lies in the same range as the previous bubble plot, but we can also see that most diamonds have "fair" or "premium" cuts.
+
+
+## 4.
+
+A tile plot showing the observed bivariate density of carat and price:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price))+
+  geom_bin2d()+
+  labs(title="Bivariate Density of Carat vs. Price")
+
+```
+
+
+
+
+
+**Description:** For our Bivariate Density of Carat vs. Price plot, we can see that the most common type of diamond lies between 0 and 0.5 carats and between 0 and $1250.
+
+
+
+
+
+## 5.
+
+A contour/level plot showing a two-dimensional kernel density estimate for the bivariate distribution of carat and price:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price))+
+  stat_density2d(geom = "polygon", aes(fill = ..level..)) + xlim(.1,3.3) +ylim(0,6700)+
+  labs(title= "Kernel Density Estimate for the Bivariate Distribution of Carat vs. Price")
+```
+
+
+
+
+**Description:** For our Kernel Density Estimate for the Bivariate Distribution of Carat vs. Price, we can see that there is a greater likelihood of diamonds being between 0 and 0.5 carats and between 0 and $2000.
+
+
+## 6.
+
+A jittered scatter plot of carat versus price overlaid with the least squares regression line for predicting price based on carat. Include the 95% confidence bands around the line:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price))+
+  geom_jitter(alpha=0.5)+
+  geom_smooth(method="lm", level=.95)
+```
+
+
+
+**Description:** For our Carat vs Price scatter plot with a linear regression model, we can see that a strong positive correlation between both variables is evident. 
+
+
+## 7. 
+
+A jittered scatter plot of carat versus price in which the cut quality is mapped to some aesthetic, overlaid with separate least squares regression lines for predicting price based on carat for each cut quality. Include the 67% confidence bands around the lines.
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price))+
+  geom_jitter( aes(color=cut))+
+  geom_smooth(method="lm", level=.67)
+```
+
+
+
+**Description:** For our Carat vs Price scatter plot with a linear regression model, we can see that a strong positive correlation between both variables is evident, and we also see that the most common types of cuts are "premium" and "ideal". 
+
+
+
+
+## 8. 
+
+Repeat graph (7), but use polynomial regression instead of simple linear. Choose the polynomial degree you think (based on a visual inspection) gives the best fit with the smallest possible degree:
+```{r}
+ggplot(diamonds.small, aes(x = carat, y = price))+
+  geom_jitter( aes(color=cut))+
+  geom_smooth(method="lm", formula = y~poly(x,4), level=.67)
+```
+
+
+
+
+**Description:** For our Carat vs Price scatter plot with a polynomial regression model, we can see that a strong positive correlation between both variables is evident, and we also see that the most common types of cuts are "premium" and "ideal". Additionally, we can see that the polynomial regression starts tapering after 2 carats and has a greater area covered by its condidence interval.
+
+
