@@ -1,0 +1,153 @@
+---
+title: "Lab01CompleteDraft"
+author: "Christian Ortiz"
+date: "10/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lab 01 Complete Draft By Christian Ortiz
+
+## Introduction
+
+The goal of this lab is to explore the question "What is the impact of Mental Health 
+and Sleep Quality on College Students?" In this document we will:
+
+* Load out data
+* Categorize DASScores, Poor Sleep Quality, & GPA
+* Create smaller datasets based on several different variables
+* Use smaller datasets to prepare a variety of different graphs
+* Report the results
+* Give several possible conclusions based on the results
+
+## Data 
+
+To address this question, we will use data from the Lock5 Datasets which are datasets
+for the first and second editions of *Statistics: Unlocking the Power of Data* by Robin Lock.
+From this dataset, we will be using the **Sleep Study** dataset which is data from a study
+of sleep patterns for college students with 253 observations and 27 variables.The sample of students in the study did skills tests to measure cognitive function, completed a survey that asked many questions about attitudes and habits, and kept a sleep diary to record time and quality of sleep over a two week period. At this time, we’ll also load our packages and store
+data in a variable to make it easier to work with:
+```{r}
+library(Lock5Data)
+library(tidyverse)
+library(RColorBrewer)
+library(ggparallel)
+# Store Dataset in Object
+full_data <- SleepStudy #Data from a study of sleep patterns for college students.
+```
+
+
+## Data Manipulation
+
+In order to prepare our data for different graphical displays, I will go ahead and first
+categorize three different variables: DASScore, PoorSleepQuality, & GPA. DASScore is
+the combined score reported for depression, anxiety and stress, and the range in our 
+data for this variable is 0-82. The range for PoorSleepQuality in our data is 1-18.
+The range for GPA is 2-4. For each of these variables, I will make four descriptive
+categories ranging from "Poor" to "Excellent" with cutoffs for each category based on
+variable distribution. I will also go ahead and remove any missing observations in the data.
+After creating categorized variables, I will go ahead and relevel my factors and create 
+smaller datasets for the graphical displays I plan to create. 
+
+```{r}
+# make categorical variables from numeric variables: DASScore, PoorSleepQuality, GPA 
+full_data <- mutate(full_data, mentalHealth = cut(DASScore, c(0,7,16,28,82),
+                                                   c("Excellent","Average", "Fair", "Poor"))) 
+
+full_data <- mutate(full_data, sleepQuality = cut(PoorSleepQuality, c(1,4,6,8,18),
+                                                   c("Excellent","Good","Average", "Poor")))
+
+full_data <- mutate(full_data, GPA= cut(GPA, c(2,3,3.3,3.5,4),
+                                                              c("Poor","Average","Good", "Excellent")))
+
+# removing missing variables
+full_data <- filter(full_data, !(is.na(GPA)), !(is.na(sleepQuality)), !(is.na(mentalHealth)))
+
+# Alluvial Data Subset
+categorical_data <- full_data %>%
+                    mutate(sleepQuality = fct_relevel(sleepQuality,
+                                                      "Poor",
+                                                      "Average",
+                                                      "Good",
+                                                      "Excellent"),
+                           mentalHealth = fct_relevel(mentalHealth, 
+                                                      "Poor",
+                                                      "Fair",
+                                                      "Average",
+                                                      "Excellent"))%>%
+                    select(sleepQuality, mentalHealth, GPA)
+
+# Scatter Plot Data Subset
+dot_plot_data <- full_data %>%
+                 select(GPA, Drinks, DASScore, ClassesMissed)
+```
+
+
+## Visual Displays
+
+```{r}
+#conditional display with variable_one as independent variable
+ggplot(full_data)+geom_bar(aes(x=sleepQuality, fill= GPA),position="fill")+
+  labs(x = "Sleep Quality", y = "Proportion", title= "Conditional Distribution of Sleep Quality \n Dependent on GPA") +
+  scale_fill_brewer(palette = "PuBu")
+
+# Alluvial Plot of Sleep Quality, Mental Health, and GPA
+cols <- c(brewer.pal(5, "Reds")[-1], 
+          brewer.pal(5, "Purples")[-1],
+          brewer.pal(5, "Blues")[-1])
+ggparallel(list("sleepQuality", "mentalHealth", "GPA"), data=categorical_data, order = 0)+
+  scale_fill_manual(values = cols) +
+  scale_colour_manual(values = cols)+
+  theme(legend.position = "none") +
+  labs(title = "Associations between Sleep Quality, Mental Health, & GPA")
+
+# Scatter Plot DASScore w/ Drinks/Week by GPA
+dot_plot_data <- full_data %>%
+                 select(GPA, Drinks, DASScore, ClassesMissed)
+ggplot(dot_plot_data, aes(x = DASScore, y = Drinks, color = GPA)) +
+  geom_point() + labs(title = "DASScore vs. Drinks per Week by GPA")
+
+# Scatter Plot DASScore w/ Classes missed by GPA
+ggplot(dot_plot_data, aes(x = DASScore, y = ClassesMissed, color = GPA)) +
+  geom_point() + labs(title = "DASScore vs. ClassesMissed by GPA")
+
+
+```
+
+
+## Results
+
+In our "Conditional Distribution of Sleep Quality Dependent on GPA," we saw that 
+the distribution of GPA remains relatively the same across the four different Sleep Quality
+categories. However, we do observe an increased proportion in those with an "Excellent" GPA when sleep quality goes from "Average" to "Good". For our "Associations between Sleep Quality,
+Mental Health, & GPA" alluvial plot, we observed a fairly uniform distribution across every
+category for the 3 variables. As we take a closer look at the distribution of mental health
+based on sleep quality, we noticed that there is also a fairly uniform distribution of mental
+health for those who reported having "Good" and "Average" sleep quality. However, we did observe significant left-skewness and right-skewness in mental health distribution for those
+with "Excellent" and "Poor", respectively. As focus on the second half of our alluvial plot,
+we take a closer look at the distribution of GPA based on mental health. For both "Fair" and
+"Average" GPA, there exists a fairly uniform distrubution of GPAs reported. For "Excellent" 
+mental health, we see that over half fall into the lower half of GPA categories. In the "Poor"
+mental health category, we observe roughly the same thing but with a roughly greater proportion in the top half of GPA categories. Looking at our first scatter plot "DASScore vs. Drinks per week by GPA", we are not able to see any clear relationship between the variables plotted, and GPA of all categories seems to be roughly randomly distributed across DASScore and Drinks. While looking at our second scatter plot "DASScore vs. Classes Missed by GPA", we are also not able to identify a clear relationship between the variables, and GPA also seems to be roughly randomly distributed across DASScore and Classes Missed.
+
+## Conclusions
+
+### Conclusion A
+
+Because each sleep quality category was roughly uniform across GPA, we conclude that sleep quality has no impact on academic performance. However,while "Fair" and "Average" mental health has little to no impact on GPA, we conclude that "Excellent" and "Poor" mental health do have an impact on GPA.
+
+### Conclusion B
+
+Because DASScore had no clear relationship with classes missed or with drinks per week, we conclude that mental health has little to no impact on academic attendance or alcohol abuse.
+
+### Conclusion C
+
+Because GPA was roughly randomly distributed across DASScore, Classes Missed, and Drinks per week, we conclude that GPA is not significantly dependent on mental health, academic attendance, or alcohol use. 
+
+## Discussion/Limitations
+
+While looking at the different graphs created, we were surprised to see little to no relationship across the variables chosen. However, we did expect to see that the extremities of mental health categories would have a greater impact on the GPA distribution for those categories. However, there are many factors to consider here that could possibly explain why little to no relationship across variables was observed. For one, DASScore, GPA, and Sleep Quality were categorical variables arbitrarily created from numerical data, and our category bins might have been too wide to capture any significant relationship between the variables. Additionally, DASScore's original numerical data was a combined score of the scores for Depression, Anxiety, and Stress, so it is possible that one of those mental state conditions might have a greater impact on GPA, sleep quality, and/or Drinks per week independently. For future exploration of this data, we would like to look more into visual displays of the numerical data and see whether any clear relationships are observed between variables.  
+
